@@ -1,0 +1,130 @@
+{{
+    func union_list
+        paramList = __table.index_list |array.each do; ret $0.index_field.name; end
+        ret array.join paramList ', '
+    end
+    func union_list_typing
+        paramList = __table.index_list |array.each do; ret $0.index_field.name + ': ' + (comment_type $0.index_field.ctype); end
+        ret array.join paramList ', '
+    end
+    func union_list_format
+        paramList = __table.index_list |array.each do; ret $0.index_field.name; end
+        ret array.join paramList ' + "_" + '
+    end
+    func union_format
+        varData = $0
+        paramList = __table.index_list |array.each do; ret varData + '["' + $0.index_field.name + '"]'; end
+        ret array.join paramList ' + "_" + '
+    end
+}}
+
+---@class {{__name}} {{-if __table.comment != ''}} @{{escape_comment __table.comment}}{{end}}
+{{~if __table.is_map_table ~}}
+---@field get_by_{{__table.index_field.name}} fun({{__table.index_field.name}}: {{comment_type __table.index_field.ctype}}): {{__table.value_ttype.def_bean.name}}
+---@field get_map fun(): table<{{comment_type __table.index_field.ctype}}, {{__table.value_ttype.def_bean.name}}>
+{{~else if __table.is_list_table ~}}
+---@field get_by_index fun(index: number): {{__table.value_ttype.def_bean.name}}
+    {{~if __table.is_union_index~}}
+---@field get_by_union fun({{union_list_typing}}): {{__table.value_ttype.def_bean.name}}
+    {{~else if !__table.index_list.empty?~}}
+        {{~for idx in __table.index_list~}}
+---@field get_by_{{idx.index_field.name}} fun({{idx.index_field.name}}: {{comment_type idx.index_field.ctype}}): {{__table.value_ttype.def_bean.name}}
+        {{~end~}}
+    {{~end~}}
+---@field get_list fun(): {{__table.value_ttype.def_bean.name}}[]
+{{~else~}}
+---@field get_instance fun(): {{__table.value_ttype.def_bean.name}}
+{{~end~}}
+{{__name}} = {}
+{{~if __table.is_map_table || __table.is_list_table ~}}
+local mt = {
+    __newindex = function(t, k, v)
+        error("attempt to update spec table: {{__name}}")
+    end
+}
+{{~end~}}
+
+{{~if __table.is_map_table ~}}
+local __data_map = {}
+{{~else if __table.is_list_table ~}}
+local __data_list = {}
+    {{~if __table.is_union_index~}}
+local __data_map_union = {}
+    {{~else if !__table.index_list.empty?~}}
+        {{~for idx in __table.index_list~}}
+local __data_map_{{idx.index_field.name}} = {}
+        {{~end~}}
+    {{~end~}}
+{{~else~}}
+local __singleton_data = nil
+{{~end~}}
+
+function {{__name}}.load(data)
+    {{~if __table.is_map_table ~}}
+    __data_map = {}
+    for i,v in ipairs(data) do
+        local _d = (require "{{__table.value_ttype.def_bean.name}}")._parse(v)
+        local _i = v["{{__table.index_field.name}}"]
+        __data_map[_i] = _d
+    end
+    setmetatable(__data_map, mt)
+    {{~else if __table.is_list_table ~}}
+    __data_list = {}
+    {{~if __table.is_union_index~}}
+    __data_map_union = {}
+    {{~else if !__table.index_list.empty?~}}
+        {{~for idx in __table.index_list~}}
+    __data_map_{{idx.index_field.name}} = {}
+        {{~end~}}
+    {{~end~}}
+    for i,v in ipairs(data) do
+        local _d = (require "{{__table.value_ttype.def_bean.name}}")._parse(v)
+        table.insert(__data_list, _d)
+        {{~if __table.is_union_index~}}
+        __data_map_union[{{union_format "_d"}}] = _d
+        {{~else if !__table.index_list.empty?~}}
+            {{~for idx in __table.index_list~}}
+        __data_map_{{idx.index_field.name}}[_d["{{idx.index_field.name}}"]] = _d
+            {{~end~}}
+        {{~end~}}
+    end
+    setmetatable(__data_list, mt)
+    {{~else~}}
+    __singleton_data = (require "{{__table.value_ttype.def_bean.name}}")._parse(data[1])
+    {{~end~}}
+end
+
+{{~if __table.is_map_table ~}}
+function {{__name}}.get_by_{{__table.index_field.name}}({{__table.index_field.name}})
+    return __data_map[{{__table.index_field.name}}]
+end
+
+function {{__name}}.get_map()
+    return __data_map
+end
+{{~else if __table.is_list_table ~}}
+function {{__name}}.get_by_index(index)
+    return __data_list[index]
+end
+    {{~if __table.is_union_index~}}
+
+function {{__name}}.get_by_union({{union_list}})
+    return __data_map_union[{{union_list_format}}]
+end
+    {{~else if !__table.index_list.empty? ~}}
+        {{~for idx in __table.index_list~}}
+
+function {{__name}}.get_by_{{idx.index_field.name}}({{idx.index_field.name}})
+    return __data_map_{{idx.index_field.name}}[{{idx.index_field.name}}]
+end
+        {{~end~}}
+    {{~end~}}
+
+function {{__name}}.get_list()
+    return __data_list
+end
+{{~else~}}
+function {{__name}}.get_instance()
+    return __singleton_data
+end
+{{~end~}}

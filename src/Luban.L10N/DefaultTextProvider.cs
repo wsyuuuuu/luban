@@ -15,20 +15,23 @@ public class DefaultTextProvider : ITextProvider
     private bool _enableTextValidation;
     private string _keyFieldName;
     private readonly HashSet<string> _keys = new();
-    
+
     public bool Enable => _enableTextValidation;
     
     public void Load()
     {
         if (!EnvManager.Current.TryGetOption(BuiltinOptionNames.L10NFamily, BuiltinOptionNames.TextProviderFile, true,
-                out string textProviderFile))
+                out string textProviderFileConfig))
         {
             s_logger.Warn("option: '-x {0}.{1}=<textProviderFile>' not found, text validation is disabled", BuiltinOptionNames.L10NFamily, BuiltinOptionNames.TextProviderFile);
             _enableTextValidation = false;
             return;
         }
         _keyFieldName = EnvManager.Current.GetOptionOrDefault(BuiltinOptionNames.L10NFamily, BuiltinOptionNames.TextKeyFieldName, false, "key");
-        LoadTextListFromFile(textProviderFile);
+        foreach (var textProviderFile in textProviderFileConfig.Split(','))
+        {
+            LoadTextListFromFile(textProviderFile);
+        }
         _enableTextValidation = true;
     }
 

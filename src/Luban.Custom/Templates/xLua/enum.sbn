@@ -1,0 +1,9 @@
+{{~ for c in __enums ~}}
+---@class {{c.full_name}} {{-if c.comment != ''}} {{escape_comment c.comment}}{{end}}
+{{c.full_name}} = {
+{{~ for item in c.items ~}}
+    --- {{item.name}} - {{item.int_value}} : {{-if item.comment != ''}} {{escape_comment item.comment}}{{end}}
+    {{format_enum_item_name __code_style item.name}} = {{item.int_value}},
+{{~end~}}
+}
+{{~end~}}

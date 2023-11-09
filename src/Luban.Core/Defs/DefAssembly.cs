@@ -366,6 +366,17 @@ public class DefAssembly
         switch (containerType)
         {
             case "array":
+            case "list":
+            case "set":
+                containerTags.TryAdd("sep", "&");
+                break;
+            case "map":
+                containerTags.TryAdd("sep", "=&");
+                break;
+        }
+        switch (containerType)
+        {
+            case "array":
             {
                 return TArray.Create(false, containerTags, CreateType(module, elementType, true));
             }

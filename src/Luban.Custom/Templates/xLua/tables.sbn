@@ -1,0 +1,12 @@
+{{~for table in __tables ~}}
+require "{{table.name}}"
+{{~end~}}
+
+---@class {{__name}}
+{{__name}} = {}
+
+function {{__name}}.load(loader)
+{{~for table in __tables ~}}
+    {{table.name}}.load(loader("{{table.output_data_file}}_data"))
+{{~end~}}
+end

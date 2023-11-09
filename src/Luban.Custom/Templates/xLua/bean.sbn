@@ -1,0 +1,41 @@
+﻿---@class {{__name}} {{-if __bean.comment != ''}} @{{escape_comment __bean.comment}}{{end}}
+{{~ for field in __export_fields ~}}
+---@field {{format_property_name __code_style field.name}} {{comment_type field.ctype}} {{field.ctype.name}} {{-if field.comment != ''}} @{{escape_comment field.comment}}{{end}}
+{{~end~}}
+local {{__name}} = {}
+local mt = {
+    __index = {
+        __id__ = {{__bean.id}},
+        __type__ = '{{__name}}',
+    },
+    __newindex = function(t, k, v)
+        error(string.format("attempt to update spec data: type={{__name}}, index=%s", k))
+    end,
+    __tostring = function(t)
+        return (require('rapidjson')).encode(t)
+    end
+}
+
+function {{__name}}._parse(source)
+    local data = {}
+
+{{~ for field in __bean.hierarchy_export_fields ~}}
+    {{parse_lua_table field.ctype 'source' field.name 'data'}}
+{{~end~}}
+
+    setmetatable(data, mt)
+    return data
+end
+
+function {{__name}}._deserialize(byte_buf)
+    local data = {}
+
+{{~ for field in __bean.hierarchy_export_fields ~}}
+    {{deserialize_byte_buffer field.ctype 'byte_buf' field.name 'data'}}
+{{~end~}}
+
+    setmetatable(data, mt)
+    return data
+end
+
+return {{__name}}

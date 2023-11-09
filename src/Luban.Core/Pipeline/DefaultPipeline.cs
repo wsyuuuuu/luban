@@ -29,7 +29,7 @@ public class DefaultPipeline : IPipeline
     {
     }
 
-    public void Run(PipelineArguments args)
+    public virtual void Run(PipelineArguments args)
     {
         _args = args;
         LoadSchema();
